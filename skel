@@ -1,0 +1,8 @@
+<case
+    id="NUMERO"
+    description1="YOUR DESCRIPTION HERE"
+    method="get"
+    url="URLD"
+    verifypositive="key"
+    errormessage="URLD"
+/>
