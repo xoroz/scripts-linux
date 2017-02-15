@@ -4,6 +4,9 @@
 
 SVCS="wpa_supplicant alsa-state cups abrt-xorg abrt-oops avahi-daemon atd abrtd irqbalance packagekit getty@tty1 libstoragemgmt NetworkManager"
 
+
+
+
 function disablesvc()
 {
 # echo "Stoping/Disablingservice $SVC"
@@ -32,15 +35,21 @@ EOF
   fi
  fi
 }
+################################## MAIN
+LINUXVER=$(cat /etc/*release |tail -n 1 |awk '{ print $(NF - 1) }')
+LINUXVER_MINOR=$(echo $LINUXVER |awk -F"." '{ print $NF}' )
+LINUXVER=$(echo $LINUXVER |awk -F"." '{ print $1}' )
 
 
-
+if [ $LINUXVER -eq 7 ]; then
 rmipv6
-
 for SVC in $SVCS
 do
  disablesvc $SVC
 done
+else
+ echo "Only works for Linux CentOS/RedHat 7"
+fi
 
 #echo "Run systemctl restart network"
 echo -e "\nDONE"
