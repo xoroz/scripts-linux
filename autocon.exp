@@ -1,0 +1,27 @@
+#!/usr/bin/expect -f
+# script to automticaly login via ssh
+# By Felipe Ferreira 09/2011
+set password "pass1"
+set passwordroot "pass2do"
+# Get name of server from script arguments
+set ipaddr [lindex $argv 0]
+set timeout 10
+# now connect to remote UNIX box (ipaddr) with given script to execute
+spawn ssh userid@$ipaddr
+match_max 100000
+# Look for passwod prompt
+expect "*?assword:*"
+send -- "$passwordr"
+# send blank line (r) to make sure we get back to gui
+send -- "r"
+#MUST EDIT HERE! Get a part of the su - output line
+expect "*?$"
+send -- "su - r"
+# Look for passwod prompt
+expect "Password:"
+# Send password aka $password
+send -- "$passwordrootr"
+# We could do anything now as root!
+# could use expect eof or exit 0 to quit
+# In this case we just interact with the cmd
+interact
