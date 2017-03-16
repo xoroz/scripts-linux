@@ -1,59 +1,76 @@
 #!/bin/bash
-#Verificar um HTTPS
 #Felipe Ferreira set 2013
 #rev. 08/2016 - add better output and sed to change , to . on timeto
+#rev. 03/2017 - adaptaed to be used as an IPS
+
+#PRE-REQ:
+#this version requires ipset and precreated iptables rules
+#originaly it workes with lighttpd, but can easly be change for apache or nginx
+
+#1) ipset create blacklist hash:ip hashsize 4096
+#2) iptables -I INPUT -m set --match-set blacklist src -j DROP
 
 URL=$1
 KEY=$2
 CRIT=$3
-http_proxy=""
-https_proxy=""
 
-LOG="/var/log/lighttpd/check_badguy.log"
+SITE=$(echo "$URL"|awk -F"/" '{ print $3}')
+
+### EDIT HERE ###
+EMAILTO="fel@mai.com"
+EMAILFROM="felipe@mail.net"
 TMPN="/tmp/ntstat.tmp"
-MAXCON=20
-MAXTIMEOUT=10
+MAXCON=6
+MAXTIMEOUT=$CRIT
+WEBSRV="lighttpd"
+LOG="/var/log/${WEBSRV}/check_badguy.log"
 #DEBUG=0
 
+### EDIT END ###
+
 if [ -z $CRIT ]; then
-   echo "Usage $0 <URL> <KEYWORD> <TIMEOUT> <noproxy>"
+   echo "Usage $0 <URL> <KEYWORD> <TIMEOUT>"
    exit 3
 fi
 
+function blockip()
+{
+ IP=$1
+ if [[ $(ipset list blacklist |grep -c "$IP") = 0 ]]; then
+   ipset add blacklist $IP |tee -a $LOG
+   service $WEBSRV stop |tee -a $LOG
+   sleep 20
+   service $WEBSRV start |tee -a $LOG
+ else
+   echo "$IP already in the blacklist" |tee -a $LOG
+ fi
+}
 
 function down() {
+  echo -e "\n\n---------------------------------------------------------------------"|tee -a $LOG
   date  |tee -a $LOG
   echo "CRITICAL - Site took to longer then $CRIT to respond, $MSGOK"  |tee -a $LOG
-  netstat -nta |grep WAIT |grep ":80"  |grep -v "127.0.0.1" |awk '{ print $5 }' > $TMPN
-  echo "NETSTAT RESULT $TMPN"
-  CT=$(wc -l $TMPN)
+  netstat -nta |grep WAIT |grep ":80"  |grep -v "127.0.0.1" |awk '{ print $5 }' |awk -F":" '{ print $1}' > $TMPN
+  echo "NETSTAT RESULT IPs WAIT CONNECTION:"
+  cat $TMPN |tee -a $LOG
+  CT=$(wc -l $TMPN|awk '{ print $1}')
   echo "WAIT CONNECTIONS: $CT" |tee -a $LOG
-  if [  "$CT"  ]; then
-#get IP and put in iptables rule to block it then restart apache and network
-#another way is to get "turned away. Too many connections." on /var/log/lighttpd/error.log
-  IP=$(cat $TMPN |awk -F":" '{ print $1}' |sort |uniq -c |sort -rn |head -n 1 |awk '{print $NF}')
-  echo "IP $IP"
+
+  if [ "$CT" -gt "$MAXCON" ]; then
+   IP=$(cat $TMPN |sort |uniq -c |sort -rn |head -n 1 |awk '{print $NF}')
   if [ $IP ]; then
-   echo "Blocking IP $IP" |tee -a $LOG
-   /bin/cp -fv /etc/sysconfig/iptables /etc/sysconfig/iptables.bkp
-   iptables-save > /etc/sysconfig/iptables
-   sed -i "9i -A INPUT -s ${IP}/32 -p tcp --dport 80 -j DROP" /etc/sysconfig/iptables
-   iptables-restore -c < /etc/sysconfig/iptables
-   iptables -L |tee -a $LOG
-   service lighttpd restart  |tee -a $LOG
-#Send an email
-   echo "SITE DOWN felipeferreira.net bad IP $IP" |/bin/mail -s "Site restarted" -a $LOG -r "felipe@mail.net"  fel@mail.com
-
-
-  else
-  echo "Could not get an offend IP" |tee -a $LOG
+   MSG="Blocking IP $IP"
+   blockip $IP
   fi
  else
-  echo "Not maxcon $MAXCON"|tee -a $LOG
+   MSG="Not maxcon $MAXCON only $CT"
  fi
+ echo $MSG |tee -a $LOG
+ echo -e "SITE DOWN $SITE \n $MSG" |/bin/mail -s "Site $SITE restarted" -a $LOG -r "$EMAILFROM" "$EMAILTO"
  exit 2
 }
 
+### MAIN ###
 
 TC=`echo ${URL} | awk -F. '{print \$1}' |awk -F/ '{print \$NF}'`
 R=$(echo $((1 + RANDOM % 1000)))
@@ -74,13 +91,14 @@ else
    down
 fi
 
+### DEBUG ONLY ###
 if [ ! -z $DEBUG ]; then
-echo "CMD_TIME: $CMD_TIME"
-echo "NUMBER OF $KEY FOUNDS:  $RESULT"
-echo "TIMES: $TIME"
-echo "TIME TOTAL: $TIMETOT"
-echo "TMP: $TMP"
-ls $TMP
+ echo "CMD_TIME: $CMD_TIME"
+ echo "NUMBER OF $KEY FOUNDS:  $RESULT"
+ echo "TIMES: $TIME"
+ echo "TIME TOTAL: $TIMETOT"
+ echo "TMP: $TMP"
+ ls $TMP
 fi
 
 rm -f $TMP
