@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# by Felipe Ferreira 03/2018
+#
 if [ -z $1 ]; then
 # echo "Using default, Warn 80% Crit 90% CPU usage"
  WARN=80
@@ -9,8 +11,9 @@ else
  CRIT=$2
 fi
 
-USAGE=$(top -b -n5 |grep Cpu |cut -d',' -f1 |awk '{ sum += $NF; n++ } END { if (n > 0) print sum / n; }' |awk -F"." '{ print $1}')
-
+USAGE_CMD="top -b -d1 -n1|grep -i 'Cpu(s)'|awk '{ sum += \$2; n++ } END { if (n > 0) print sum / n; }' |awk -F'.' '{ print \$1}'"
+#echo $USAGE_CMD
+USAGE=$(eval $USAGE_CMD)
 MSG="CPU usage is at ${USAGE}% |CPU=$USAGE"
 
 if [ "$USAGE" -gt "$CRIT" ]; then
