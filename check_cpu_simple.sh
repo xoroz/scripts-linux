@@ -11,7 +11,7 @@ else
  CRIT=$2
 fi
 
-USAGE_CMD="top -b -d1 -n1|grep -i 'Cpu(s)'|awk '{ sum += \$2; n++ } END { if (n > 0) print sum / n; }' |awk -F'.' '{ print \$1}'"
+USAGE_CMD="top -b -d1 -n5|grep -i 'Cpu(s)' |tail -n 4|awk '{ sum += \$2; n++ } END { if (n > 0) print sum / n; }' |awk -F'.' '{ print \$1}'"
 #echo $USAGE_CMD
 USAGE=$(eval $USAGE_CMD)
 MSG="CPU usage is at ${USAGE}% |CPU=$USAGE"
