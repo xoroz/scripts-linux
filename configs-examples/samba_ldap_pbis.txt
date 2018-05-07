@@ -1,0 +1,38 @@
+Example for Samba integration with PBIS, must run the command
+/opt/pbis/bin/samba-interop-install --install
+
+/etc/samba/smb.conf
+[global]
+log level = 2
+debug pid = true
+security = ADS
+workgroup = <DOMAIN_NAME>
+realm = <DOMAIN_FQDN>
+netbios name = <SERVERNAME>
+log file = /var/log/samba/samba-pbis.log
+#idmap domains = ALL
+idmap config ALL:backend = lwicompat_v4
+idmap config ALL:default = yes
+idmap config ALL:readonly = yes
+map untrusted to domain = Yes
+getwd cache = yes
+kernel oplocks = yes
+#socket options = IPTOS_LOWDELAY TCP_NODELAY SO_KEEPALIVE
+strict locking = yes
+
+#IF ERRORS RUN THE CMD:
+# /opt/pbis/bin/samba-interop-install --install
+
+#======================= Share Definitions =======================
+[repo]
+        comment = SoftwareRepo
+        valid users = @"DOMAIN\admins" "DOMAIN\servicein"
+        browsable = yes
+        writable = yes
+        guest ok = yes
+        read only = no
+        create mask = 0664
+        directory mask = 0775
+        force user = repo
+        path = /opt/repo
+        oplocks = yes
