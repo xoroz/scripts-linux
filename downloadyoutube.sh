@@ -1,10 +1,12 @@
 #!/bin/bash
-# bash script to download youtube video and convert to mp3 audio
+
+# script to download audio from youtube
 #
 # be sure to have the python library youtube-dl installed and updated
 # by default files will be save to $HOME\Downloads\mp3\ DIR
+
 ## EDIT HERE
-U=felix
+U="felix"
 DF="/home/$U/Downloads/mp3"
 ##
 
@@ -24,18 +26,19 @@ cd $DF
 for id in "$@"
 do
     #check if viedo exists
-    C=$(curl -s  -I https://www.youtube.com/watch?v=$id |head -n 1|grep -c 200)
+    echo "Checking: https://www.youtube.com/watch?v=$id"
+    C=$(curl -s  -I "https://www.youtube.com/watch?v=$id" |head -n 1|grep -c 200)
     if [ $C -ne 1 ]; then
      echo "Could not find the URL "https://www.youtube.com/watch?v=$id""
      break;
     fi
     FILENAME=$(youtube-dl --get-filename -o '%(title)s.%(ext)s' --restrict-filenames $id)
     FILENAME=$(echo $FILENAME|awk -F"." '{print $1}'| cut -c 1-30)
-    FILENAME="${FILENAME}.mp3"
+    FILENAME="${FILENAME}"
     echo "Downloading $id NAME: $FILENAME"
     if [ -z "$FILENAME" ]; then
      echo "NAME will be $id"
-     FILENAME="${id}.mp3"
+     FILENAME="${id}"
     fi
     echo "Downloading $id NAME: $FILENAME"
 
@@ -46,18 +49,10 @@ do
     
     echo -e "\n\n --> Downloading $id NAME: $FILENAME"
     if [ ! -f "${FILENAME}" ]; then
-     #youtube-dl -f bestaudio -o '%(title)s.%(ext)s' --restrict-filenames $id
-     youtube-dl -f bestaudio -o $FILENAME --restrict-filenames $id
+     youtube-dl  -x --ffmpeg-location /usr/bin/ffmpeg -o $FILENAME.m.1 --restrict-filenames --no-part --audio-format mp3 --audio-quality 0 $id
 
+#      mv -f $FILENAME.m.mp3 $FILENAME.mp3
     fi
-    echo -e "\n\n --> Converting $FILENAME to mp3"    
-    ffmpeg -hide_banner -i $(find -type f -name "$FILENAME") -vn -stats -ab 128k -ar 44100 -y $MP3
-    if [ -f "$FILENAME" ]; then
-        FILESIZE=$(du -sh $FILENAME|awk '{ print $1}')
-	echo " --> DONE: Audio file is ready at ${DF}${FILENAME} ( $FILESIZE )"
-    else
-        echo -e "\n\n\n --> ERROR - Something went wrong $FILENAME not found\n\n\n"         
-    fi    	
 done
 chown $U -R $DF
 exit 0
