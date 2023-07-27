@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # ## Plugin for Nagios to monitor directory size
 # ## Written by Gerd Stammwitz (http://www.enbiz.de/)
@@ -134,16 +134,29 @@ done
 
 ##### Get size of specified directory
 
-error=""
-duresult=`$FIND $dirpath -type f |$WC -l || error="Error"`
-
-if [ ! "$error" = "" ]; then
-    errtext=`echo $duresult`
-    echo "$error:$errtext"
-    exit $STATE_UNKNOWN
+# Path exists? 
+if [ ! -d $dirpath ]; then
+    echo "Directory '$dirpath' does not exist!"
+    exit $STATE_CRITICAL
 fi
 
-dirsize=`echo $duresult`
+# Should generally be run as root to avoid "Permission denied" errors.
+# Nagios is not able to see the error messages whether std is redirected or not as wc is catching the output.
+# Helping the user diagnose the problem in Nagios itself is done below on checking the return code.
+# stderr is redirected here to not get duplicate output when manually running the script.
+dirsize=$($FIND $dirpath -type f 2>&1 | $WC -l ; exit "${PIPESTATUS[0]}")
+returnCode=$?
+
+if [ $returnCode != 0 ]; then
+	# For the user to be able to see the error message in Nagios, this needs to be printed out
+	# on stdout (which is piped to wc before). Therefore, we repeat find here (without wc) to hopefully
+	# get the same error as before. stdout is ignored, afterwards stderr is redirected to stdout, so
+	# only the error messages are printed out.
+	error=$($FIND $dirpath -type f 2>&1 >/dev/null)
+	echo "Error: find failed with \"$error\""
+	exit $STATE_UNKNOWN
+fi
+
 result="OK"
 exitstatus=$STATE_OK
 
