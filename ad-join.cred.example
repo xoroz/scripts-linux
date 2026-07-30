@@ -1,0 +1,50 @@
+# ad-join.cred.example
+#
+# Copy this to /etc/ad-join.cred (or any path you pass as the script's
+# argument), fill in real values, then lock it down:
+#
+#   cp ad-join.cred.example /etc/ad-join.cred
+#   vi /etc/ad-join.cred
+#   chown root:root /etc/ad-join.cred
+#   chmod 600 /etc/ad-join.cred
+#
+# ad-join.sh refuses to read this file unless it is owned root:root and
+# mode 0600.
+
+# --- Required ---
+
+AD_DOMAIN="ad.example.com"
+AD_JOIN_USER="svc-linuxjoin"
+
+# --- Optional: password ---
+# If you leave this unset or commented out, ad-join.sh will prompt for
+# it interactively (hidden input) at run time instead of storing it on
+# disk. Only set this if you need fully unattended runs, e.g. from
+# Semaphore/Ansible.
+
+#AD_JOIN_PASSWORD="SuperSecretPassword"
+
+# --- Optional: where the computer account gets created ---
+# Full DN of the target OU. If left unset, AD uses its default
+# Computers container.
+
+AD_OU="OU=LinuxServers,OU=Servers,DC=ad,DC=example,DC=com"
+
+# --- Optional: account tiers ---
+# Plain AD group names (sAMAccountName), NOT CN=... / distinguishedName
+# format. Spaces in the group name are fine, the script handles the
+# sudoers escaping for you.
+#
+#   AD_ADMIN_GROUP  -> SSH + RDP login, FULL sudo (root-equivalent)
+#   AD_USER_GROUP   -> SSH + RDP login, sudo ONLY for:
+#                        dnf/yum install / update / upgrade / reinstall
+#   AD_ALLOW_GROUP  -> SSH + RDP login only, no sudo at all (optional
+#                      third tier if you want a "look but don't touch"
+#                      group)
+#
+# Leave any of these blank/commented to skip that tier. If ALL THREE are
+# left unset, every AD user in the domain can log in with no sudo.
+
+AD_ADMIN_GROUP="Linux-Admins"
+AD_USER_GROUP="Linux-Users"
+#AD_ALLOW_GROUP="Linux-ReadOnly"
